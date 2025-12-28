@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "utils.c"
+#include "utils.h"
 
 // Add a zero to LSB and pad with zeros to multiple of window
 uint32_t pad(uint32_t number, int window) {
@@ -37,7 +37,13 @@ char* radix2r(uint32_t number, int window, int* ones) {
   number = number << 1;
   *ones = 0;
 
-  if (number == 0) return "0";
+  if (number == 0) {
+    char *z = (char*) malloc(2);
+    z[0] = '0';
+    z[1] = '\0';
+    *ones = 1;
+    return z;
+  }
 
   int length = bitlength(number);
   int groups = (int) ceil((float) length / window);
@@ -47,8 +53,8 @@ char* radix2r(uint32_t number, int window, int* ones) {
     int Qi = rslice(number, window, i);
 
     int si = Qi >= 0 ? 0 : 1;
-    int ni = factor2(Qi);
-    int mi = (int) abs(Qi) / pow(2, ni);
+    int ni = factor2(abs(Qi));
+    int mi = abs(Qi) >> ni;
 
     for (int j = 0; j < window; j++) {
       if (j != ni) prepend(representation, "0");
@@ -56,10 +62,13 @@ char* radix2r(uint32_t number, int window, int* ones) {
         char* temp = (char*) malloc(window + 3);
         sprintf(temp, "(%c%d)", si == 0 ? '+' : '-', mi);
         prepend(representation, temp);
+        free(temp);
         (*ones)++;
       }
     }
   }
 
-  return tostring(representation);
+  char* out = tostring(representation);
+  destroy(representation);
+  return out;
 }

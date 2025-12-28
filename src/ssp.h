@@ -1,5 +1,5 @@
 #pragma once
-#include "utils.c"
+#include "utils.h"
 #include "string.h"
 
 // Extract index-th slice of size window + 1 starting at LSB and turn it into two's complement
@@ -20,9 +20,15 @@ int nextone(uint32_t number, int start) {
 
 // SSP representation of a number with window size 'window' DYNAMIC MEMORY ALLOCATION
 char* ssp(uint32_t number, int window, int* ones) {
-  if (number == 0) return "0";
+  if (number == 0) {
+    char *z = (char*) malloc(2);
+    z[0] = '0';
+    z[1] = '\0';
+    *ones = 1;
+    return z;
+  };
+  
   int length = bitlength(number) + 1;
-
   int i = 0;
   *ones = 0;
 
@@ -40,10 +46,12 @@ char* ssp(uint32_t number, int window, int* ones) {
     char* temp = (char*) malloc(window + 3);
     sprintf(temp, "(%c%d)", s == 0 ? '+' : '-', abs(S));
     prepend(representation, temp);
+    free(temp);
+
     (*ones)++;
     for (int j = 1; j < window; j++)
       prepend(representation, "0");
-    i = i + window;
+    i += window;
 
     if (s == 1) {
       while (extract(number, i, 1) == 1) {
@@ -56,6 +64,7 @@ char* ssp(uint32_t number, int window, int* ones) {
     }
   }
 
+  char* out = tostring(representation);
   destroy(representation);
-  return tostring(representation);
+  return out;
 } 

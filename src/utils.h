@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Converts a number to a binary string of length 'length' DYNAMIC MEMORY
 // ALLOCATION MUST FREE
@@ -19,31 +20,6 @@ char *tobinaryl(uint32_t number, int length, int* ones) {
 
   buffer[length] = '\0';
   return buffer;
-}
-
-// Converts a number to a binary string of length 'length' with spaces every
-// 'window' bits DYNAMIC MEMORY ALLOCATION MUST FREE
-char *tobinarylw(uint32_t number, int length, int window) {
-  length = length + window - (length - 1) % window;
-  int spacedlength = length + (int)(length / window) - 1;
-  int cursor = 0;
-  int ones = 0;
-
-  char *buffer = tobinaryl(number, length, &ones);
-  char *spacedbuffer = (char *)malloc(sizeof(char) * spacedlength);
-
-  for (int i = 0; i < spacedlength; i++) {
-    if (i % (window + 1) == window) {
-      spacedbuffer[i] = ' ';
-      continue;
-    }
-
-    spacedbuffer[i] = buffer[cursor];
-    cursor++;
-  }
-
-  spacedbuffer[spacedlength] = '\0';
-  return spacedbuffer;
 }
 
 // Converts a number to binary string of length 32
@@ -80,16 +56,22 @@ typedef struct Word Word;
 typedef struct Sentence Sentence;
 
 Word *fromstring(char *string) {
+  if (!string)
+    return NULL;
   Word *word = (Word *)malloc(sizeof(Word));
-  word->content = string;
-  word->length = 0;
-  while (string[word->length] != '\0')
-    word->length++;
+  if (!word)
+    return NULL;
+  word->length = strlen(string);
+  word->content = (char*) malloc(sizeof(char) * (word->length + 1));
+  memcpy(word->content, string, word->length + 1);
+  word->next = NULL;
   return word;
 }
 
 Sentence *empty() {
   Sentence *sentence = (Sentence *)malloc(sizeof(Sentence));
+  if (!sentence)
+    return NULL;
   sentence->head = NULL;
   sentence->tail = NULL;
   sentence->length = 0;
@@ -98,15 +80,14 @@ Sentence *empty() {
 
 Sentence *prepend(Sentence *sentence, char *string) {
   if (!sentence || !string)
-    return NULL;
+    return sentence;
   Word *word = fromstring(string);
-
-  if (sentence->length == 0)
-    sentence->tail = word;
-  else
-    word->next = sentence->head;
-
+  if (!word)
+    return NULL;
+   
+  word->next = sentence->head;
   sentence->head = word;
+  if (sentence->tail == NULL) sentence->tail = word;  
   sentence->length += word->length;
 
   return sentence;
@@ -116,53 +97,62 @@ Sentence *append(Sentence *sentence, char *string) {
   if (!sentence || !string)
     return NULL;
   Word *word = fromstring(string);
+  if (!word)
+    return sentence;
 
-  if (sentence->length == 0)
+  if (sentence->tail == NULL) {
     sentence->head = word;
-  else
+    sentence->tail = word;  
+  } else {
     sentence->tail->next = word;
-  sentence->tail = word;
+    sentence->tail = word;
+  }
   sentence->length += word->length;
 
   return sentence;
 }
 
 void destroy(Sentence *sentence) {
-  if (sentence->length == 0)
+  if (!sentence)
     return;
 
   Word *current = sentence->head;
-  while (current != sentence->tail) {
+  while (current) {
     Word *next = current->next;
+    free(current->content);
     free(current);
     current = next;
   }
-  free(sentence->tail);
+  free(sentence);
 }
 
 char *tostring(Sentence *sentence) {
   if (!sentence)
     return NULL;
-  if (sentence->length == 0)
-    return "\0";
-
-  unsigned int position = 0;
-  unsigned int currentposition = 0;
+  if (sentence->length == 0) {
+    char *s = malloc(1);
+    if (s) s[0] = '\0';
+    return s;
+  }
 
   char *contents = (char *)malloc(sizeof(char) * (sentence->length + 1));
-  Word *current = sentence->head;
+  
+  if (!contents)
+    return NULL;
 
-  while (position < sentence->length) {
+  unsigned int position = 0;
+  Word *current = sentence->head;
+  unsigned int currentposition = 0;
+
+  while (current && position < sentence->length) {
     if (currentposition >= current->length) {
       current = current->next;
       currentposition = 0;
+      continue;
     }
-
-    contents[position] = current->content[currentposition];
-    currentposition++;
-    position++;
+    contents[position++] = current->content[currentposition++];
   }
 
-  destroy(sentence);
+  contents[sentence->length] = '\0';
   return contents;
 }

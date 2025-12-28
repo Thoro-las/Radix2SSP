@@ -1,7 +1,7 @@
-#include "utils.c"
+#include "utils.h"
 #include <stdio.h>
-#include "radix2r.c"
-#include "ssp.c"
+#include "radix2r.h"
+#include "ssp.h"
 
 int main() {
   for (int i = 1; i < 1024; i++) {
